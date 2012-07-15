@@ -1,0 +1,186 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+    "http://www.w3.org/TR/html4/loose.dtd">
+        <html xmlns="http://www.w3.org/1999/xhtml">
+            <head>
+            <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+                <title>Visualizing Facebook</title>
+                    <script src="../lib/vivagraph.js"></script>
+                        <script src="http://code.jquery.com/jquery-latest.js"></script>
+                            <script type='text/javascript'>
+                                /*global Viva*/
+                                var colors = [
+                                    "#1f77b4", "#aec7e8",
+                                    "#ff7f0e", "#ffbb78",
+                                    "#2ca02c", "#98df8a",
+                                    "#d62728", "#ff9896",
+                                    "#9467bd", "#c5b0d5",
+                                    "#8c564b", "#c49c94",
+                                    "#e377c2", "#f7b6d2",
+                                    "#7f7f7f", "#c7c7c7",
+                                    "#bcbd22", "#dbdb8d",
+                                    "#17becf", "#9edae5"
+                                ];
+
+function beginRemoveNodesLoop(graph){
+    var nodesLeft = [];
+    graph.forEachNode(function(node){
+        nodesLeft.push(node.id);
+    });
+    
+    var removeInterval = setInterval(function(){
+        var nodesCount = nodesLeft.length;
+        
+        if (nodesCount > 0){
+            var nodeToRemove = Math.min((Math.random() * nodesCount) << 0, nodesCount - 1);
+            
+            graph.removeNode(nodesLeft[nodeToRemove]);
+            nodesLeft.splice(nodeToRemove, 1);
+        }
+        
+        if (nodesCount === 0) { 
+            clearInterval(removeInterval);
+            setTimeout(function(){
+                beginAddNodesLoop(graph);
+            }, 100);
+        }
+    }, 100);
+}
+
+function hideElement(elementName){
+    $(function(elementName){
+        $(elementName).hide();
+    });
+}
+
+function beginAddNodesLoop(res,graph){
+    var i = 0, m = 500, n = 20;
+    console.log("from the last step " + res);  
+    // TODO: get the result dictionary as a parameter and populate the nodes. 
+	   
+    graph.beginUpdate();
+    var node = 0;
+    
+    // sample implementation of getting the JSON data using jquery and creating the node distribution
+    $.getJSON('https://graph.facebook.com/511183593/friends?access_token=AAAAAAITEghMBAF01drFdtHFYUDjpaJrZB4ZC2dDQFdTGijgdnOKCd7IFkmgChilWYteuSETpHo88YDhAJTlTRINfyZCXVvm09pUNN4ZBMAZDZD', function(data) {         
+        $.each(data, function(key, val) {
+            //console.log("key=" + key + " " + "val=" + val);
+            graph.addNode('Shankar', {url : 'http://graph.facebook.com/511183593/picture'});
+            for(i=510; i<val.length; i++){
+                console.log(val[i]['id']);		
+                graph.addNode(val[i]['name'], {url : 'http://graph.facebook.com/'+val[i]['id']+'/picture'});
+                graph.addLink("Shankar",val[i]['name']);
+            }
+            
+            
+        });
+    });	
+    graph.endUpdate();
+    
+    
+}
+
+function onLoad(response) {
+	console.log("In onload "+ response);
+    var graph = Viva.Graph.graph();
+    
+    var layout = Viva.Graph.Layout.forceDirected(graph, {
+        springLength : 300,
+        springCoeff : 0.0008,
+        dragCoeff : 0.02,
+        gravity : -1.2
+    });
+    
+    // var graphics = Viva.Graph.View.cssGraphics();
+    var graphics = Viva.Graph.View.svgGraphics();
+    graphics.node(function(node){
+        return Viva.Graph.svg('image')
+            .attr('width', 90)
+            .attr('height', 60)
+            .link(node.data.url); // node.data holds custom object passed to graph.addNode();
+        
+    })
+        .placeNode(function(nodeUI, pos){
+            // Shift image to let links go to the center:
+            nodeUI.attr('x', pos.x - 30).attr('y', pos.y - 30);
+        });
+    
+    var renderer = Viva.Graph.View.renderer(graph,
+                                            {
+                                                layout     : layout,
+                                                graphics   : graphics,
+                                                container  : document.getElementById('graph1'),
+                                                renderLinks : true
+                                            });
+    
+    renderer.run(50);
+    
+    beginAddNodesLoop(response,graph);
+    l = layout;
+}
+</script>
+    <style type='text/css'>
+        .node {
+            background-color: #00a2e8;
+                width: 100px;
+            height: 100px;
+            position: absolute;
+        }
+.link {
+    background-color: #ddddd;
+        position: absolute;
+}
+
+#graph1{
+    position: absolute;
+width: 100%;
+    height: 100%;
+        }
+            
+            </style>
+                </head>
+                <body style="background-color: white;">
+                    <div id="fb-root"></div>
+                        <script>
+                        window.fbAsyncInit = function() {
+                            FB.init({
+                                appId      : '130762073623134', // App ID
+                                status     : true, // check login status
+                                cookie     : true, // enable cookies to allow the server to access the session
+                                xfbml      : true  // parse XFBML
+                            });
+                            
+                            
+                            
+                            
+                            FB.api('/me',function(response){
+                                console.log(response.error.code);
+								if(response.name){
+									console.log(response.name);
+									document.getElementById('login').style.display='none';
+									var g = document.createElement('div');
+									g.id = 'graph1';
+									onload(response);
+								}
+								
+									
+                            });
+							
+                            
+                        };
+// Load the SDK Asynchronously
+(function(d){
+    var js, id = 'facebook-jssdk', ref = d.getElementsByTagName('script')[0];
+    if (d.getElementById(id)) {return;}
+    js = d.createElement('script'); js.id = id; js.async = true;
+    js.src = "https://connect.facebook.net/en_US/all.js";
+    ref.parentNode.insertBefore(js, ref);
+}(document));
+</script>
+    
+    <div id='login' class="fb-login-button" scope="friends_hometown,user_hometown,friends_location,user_location,friends_checkins">Login with Facebook</div>
+		
+        <!--<div id='graph1'></div>-->	
+            
+            </body>
+            </html>
+            
